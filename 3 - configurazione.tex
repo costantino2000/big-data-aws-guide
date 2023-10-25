@@ -1,0 +1,120 @@
+\section{Configurazione dei cluster}
+
+
+\subsection{Download di Hadoop e installazione di Java}
+
+Torniamo nelle console collegate tramite SSH alle nostre due istanze. \textcolor{red}{In ognuna delle istanze} bisogna aggiornare per prima cosa i repository (potrebbe chiedere di riavviare dei servizi in caso di aggiornamento del kernel, basta accettare le impostazioni di default e fare ok):
+
+\begin{verbatim}
+    $ sudo apt-get update && sudo apt-get dist-upgrade -y
+\end{verbatim}
+
+e installare Java 8:
+
+\begin{verbatim}
+    $ sudo apt-get install openjdk-8-jdk -y
+\end{verbatim}
+
+Scarichiamo ora il file compresso di Hadoop, estraiamolo e spostiamolo nella cartella \textbf{/home/ubuntu/hadoop}. Infine, rimuoviamo il file scaricato in precedenza (occhio ai \textbf{comandi su più righe}, vanno riportati su una prima di eseguirli!):
+
+\begin{verbatim}
+    $ wget https://archive.apache.org/dist/hadoop/common/hadoop-2.7.7
+        /hadoop-2.7.7.tar.gz
+    $ sudo tar zxvf hadoop-2.7.7.tar.gz
+    $ sudo mv ./hadoop-2.7.7 /home/ubuntu/hadoop
+    $ rm hadoop-2.7.7.tar.gz
+\end{verbatim}
+
+Impostiamo le variabili di ambiente aprendo il file \textbf{.profile}:
+
+\begin{verbatim}
+    $ nano /home/ubuntu/.profile
+\end{verbatim}
+
+e inserendoci le seguenti righe:
+
+\begin{verbatim}
+    export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+    export PATH=$PATH:$JAVA_HOME/bin
+    export HADOOP_HOME=/home/ubuntu/hadoop
+    export PATH=$PATH:/home/ubuntu/hadoop/bin
+    export HADOOP_CONF_DIF=/home/ubuntu/hadoop/etc/hadoop
+    export PYSPARK_PYTHON=python3
+\end{verbatim}
+
+Infine aggiorniamole utilizzando il comando \textbf{source}:
+
+\begin{verbatim}
+    $ source /home/ubuntu/.profile
+\end{verbatim}
+
+
+\newpage
+
+
+\subsection{Configurazione della connessione SSH}
+
+Questa parte andrà svolta \textcolor{red}{solo sull'istanza del master}. Creiamo un file di configurazione per associare i nomi delle istanze ai loro indirizzi IPv4 pubblici e alla loro chiave privata:
+
+\begin{verbatim}
+    $ nano /home/ubuntu/.ssh/config
+\end{verbatim}
+
+Identifichiamo con \textbf{namenode} il master e con \textbf{datanode1} e \textbf{datanode2} i due slave. I primi due gireranno sull'istanza namenode, mentre datanode2 girerà sull'istanza omonima:
+
+\begin{verbatim}
+    Host namenode
+    HostName namenode
+    User ubuntu
+    IdentityFile /home/ubuntu/.ssh/my-key.pem
+    Host datanode1
+    HostName namenode
+    User ubuntu
+    IdentityFile /home/ubuntu/.ssh/my-key.pem
+    Host datanode2
+    HostName datanode2
+    User ubuntu
+    IdentityFile /home/ubuntu/.ssh/my-key.pem
+\end{verbatim}
+
+Ora apriamo \textcolor{red}{in entrambe le istanze} il file \textbf{hosts}:
+
+\begin{verbatim}
+    $ sudo nano /etc/hosts
+\end{verbatim}
+
+e andiamo a includere gli ip pubblici in questo modo:
+
+\begin{verbatim}
+    IPMASTER namenode
+    IPMASTER datanode1
+    IPSLAVE  datanode2
+\end{verbatim}
+
+Dove IPMASTER e IPSLAVE si trovano selezionando singolarmente ognuna delle istanze nella dashboard di EC2 e leggendo dal pannello dei dettagli la voce IPv4 Public IP (come già visto nella sezione 2). Facendo cosi, quando fermeremo le istanze e le rifaremo partire, dato che avranno indirizzi ip pubblici diversi, basterà aggiornare il file hosts in entrambe le istanze con i nuovi indirizzi ip pubblici.
+
+Ritorniamo ora \textcolor{red}{al terminale del master}, e diamo le autorizzazioni SSH per la connessione dal master allo slave:
+
+\begin{verbatim}
+    $ ssh-keygen -f /home/ubuntu/.ssh/id_rsa -t rsa -P ''
+    $ cat /home/ubuntu/.ssh/id_rsa.pub
+        >> /home/ubuntu/.ssh/authorized_keys
+    $ chmod 600 /home/ubuntu/.ssh/my-key.pem
+    $ ssh datanode1 'cat >> /home/ubuntu/.ssh/authorized_keys'
+        < /home/ubuntu/.ssh/id_rsa.pub
+    $ ssh datanode2 'cat >> /home/ubuntu/.ssh/authorized_keys'
+        < /home/ubuntu/.ssh/id_rsa.pub
+\end{verbatim}
+
+Per verificare che tutti i passaggi siano stati eseguiti correttamente e che la connessione SSH sia attiva possiamo provare il seguente comando (sempre dal terminale del master):
+
+\begin{verbatim}
+    $ ssh datanode2
+\end{verbatim}
+
+Questo verifica che la connessione verso l'istanza slave funzioni correttamente (in caso negativo il terminale restituirà il messaggio \textbf{PERMISSION DENIED}). Per controllare datanode1 basta cambiare il numero.
+
+Una volta avviata una connessione la si può interrompere in qualsiasi momento con la combinazione \textcolor{red}{ctrl+D}.
+
+
+\include{3.1 - sparkdoop}

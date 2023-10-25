@@ -1,0 +1,110 @@
+\section{Esecuzione dei programmi}
+
+
+
+\subsection{Primo avvio di Hadoop}
+
+Questi comandi andranno lanciati \textcolor{red}{solo sul master}. Per prima cosa formattiamo la partizione dell'hdfs:
+
+\begin{verbatim}
+    $ hdfs namenode -format
+\end{verbatim}
+
+Poi bisogna avviare i servizi \textbf{hdfs}, \textbf{yarn} e \textbf{historyserver} con i seguenti comandi (in alternativa c'è lo script deprecato \textbf{start-all.sh}):
+
+\begin{verbatim}
+    $ $HADOOP_HOME/sbin/start-dfs.sh
+    $ $HADOOP_HOME/sbin/start-yarn.sh
+    $ $HADOOP_HOME/sbin/mr-jobhistory-daemon.sh start historyserver
+\end{verbatim}
+
+Per essere sicuri infine che hdfs sia configurato e funzioni correttamente si esegue comando seguente:
+
+\begin{verbatim}
+    $ hdfs dfsadmin -report
+\end{verbatim}
+
+Se tutto ha funzionato correttamente dovrebbero esserci \textbf{due datanode live}. Se questo avviene, dentro la cartella \textbf{\$HADOOP\_HOME/hdfs} dovrebbe essere presente la cartella \textbf{data}, la quale dovrebbe contenere le cartelle \textbf{datanode} e/o \textbf{namenode} (nel nodo master ci sono entrambe, nello slave solo la seconda), le quali a loro volta dovrebbero contenere il file \textbf{in\_use.lock} e la cartella \textbf{current}.
+
+
+
+\subsection{Primo avvio di Spark}
+
+Prima di avviare Spark è necessario fermare i processi di Hadoop (sempre \textcolor{red}{dal terminale del master}), in quanto le istanze gratuite di AWS non hanno abbastanza ram per eseguirli entrambi in contemporanea (in alternativa ai comandi seguenti c'è lo script deprecato \textbf{stop-all.sh}):
+
+\begin{verbatim}
+    $ $HADOOP_HOME/sbin/stop-dfs.sh
+    $ $HADOOP_HOME/sbin/stop-yarn.sh
+    $ $HADOOP_HOME/sbin/mr-jobhistory-daemon.sh stop historyserver
+\end{verbatim}
+
+Avviamo ora Spark con il seguente comando:
+
+\begin{verbatim}
+    $ /home/ubuntu/spark/sbin/start-master.sh
+\end{verbatim}
+
+A questo punto dobbiamo aprire l'interfaccia web di Spark. Apriamo il nostro browser, andiamo all'indirizzo pubblico del master seguito dalla porta 8080 (quindi \textbf{ip\_pubblico:8080}) e salviamo l'URL indicato nel titolo della pagina (quello che inizia con \textbf{spark://...}). Useremo questo indirizzo per lanciare gli slave.
+
+Nel terminale \textcolor{red}{di ogni nodo slave} (quindi anche nell'istanza del master, dato che contiene datanode1) deve essere inserito il comando seguente, sostituendo ADDRESS con l'URL trovato prima:
+
+\begin{verbatim}
+    $ /home/ubuntu/spark/sbin/start-slave.sh ADDRESS
+\end{verbatim}
+
+Una volta lanciato il comando su entrambe le istanze, i worker risultanti nell'interfaccia di Spark dovranno essere due.
+
+
+
+\subsection{Avvii successivi alla configurazione}
+
+
+\subsubsection{Aggiornamento degli indirizzi ip}
+
+Questa sezione andrà sempre seguita in seguito al riavvio delle macchine. Sarà sempre necessario aprire \textcolor{red}{sia sul master che sullo slave} il file \textbf{hosts}:
+
+\begin{verbatim}
+    $ sudo nano /etc/hosts
+\end{verbatim}
+
+e aggiornare gli indirizzi ip pubblici, perché cambiano a ogni avvio delle istanze.
+
+
+\subsubsection{Avvio di Hadoop}
+
+Se si vuole lanciare Hadoop, basta rieseguire i seguenti comandi \textcolor{red}{sul terminale del master}:
+
+\begin{verbatim}
+    $ $HADOOP_HOME/sbin/start-dfs.sh
+    $ $HADOOP_HOME/sbin/start-yarn.sh
+    $ $HADOOP_HOME/sbin/mr-jobhistory-daemon.sh start historyserver
+\end{verbatim}
+
+mentre, per chiuderlo:
+
+\begin{verbatim}
+    $ $HADOOP_HOME/sbin/stop-dfs.sh
+    $ $HADOOP_HOME/sbin/stop-yarn.sh
+    $ $HADOOP_HOME/sbin/mr-jobhistory-daemon.sh stop historyserver
+\end{verbatim}
+
+
+\subsubsection{Avvio di Spark}
+
+Se si vuole utilizzare Spark (ricordandosi di \textbf{chiudere Hadoop prima} se è in esecuzione) basta eseguire il seguente comando (sempre \textcolor{red}{dal terminale del master}):
+
+\begin{verbatim}
+    $ /home/ubuntu/spark/sbin/start-master.sh
+\end{verbatim}
+
+e, per avviare i worker, \textcolor{red}{sia dal master che dallo slave} bisogna eseguire questo comando (sostituendo ad ADDRESS l'indirizzo che inizia per \textbf{spark://...} nel titolo dell'interfaccia web visitabile all'indirizzo \textbf{ip\_pubblico\_master:8080}):
+
+\begin{verbatim}
+    $ /home/ubuntu/spark/sbin/start-slave.sh ADDRESS
+\end{verbatim}
+
+Se si vuole poi aprire il terminale di \textbf{pyspark} basterà eseguire il seguente comando:
+
+\begin{verbatim}
+    $ /home/ubuntu/spark/bin/pyspark
+\end{verbatim}

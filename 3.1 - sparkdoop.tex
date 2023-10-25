@@ -1,0 +1,208 @@
+\subsection{Configurazione di Hadoop e Spark}
+
+
+
+\subsubsection{Configurazione di tutti i nodi}
+
+\textcolor{red}{Per ogni istanza} si devono modificare quattro file di configurazione. Il primo, \textbf{hadoop-env.sh}, contiene la configurazione delle variabili di ambiente di Hadoop. Apriamolo:
+
+\begin{verbatim}
+    $ nano $HADOOP_CONF_DIF/hadoop-env.sh
+\end{verbatim}
+
+e sostituiamo la riga
+
+\begin{verbatim}
+    export JAVA_HOME=$JAVA_HOME
+\end{verbatim}
+
+con
+
+\begin{verbatim}
+    export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+\end{verbatim}
+
+Passiamo al secondo file, \textbf{core-site.xml}. Apriamolo:
+
+\begin{verbatim}
+    $ sudo nano $HADOOP_CONF_DIF/core-site.xml
+\end{verbatim}
+
+e inseriamo la seguente proprietà all'interno dell'elemento \textbf{\textlangle configuration\textrangle}, con al posto di HOSTNAME l'indirizzo Ipv4 \textbf{privato} del master (reperibile nella stessa schermata da cui si è preso quello pubblico):
+
+\begin{verbatim}
+    <property>
+    <name>fs.defaultFS</name>
+    <value>hdfs://HOSTNAME:9000</value>
+    </property>
+\end{verbatim}
+
+Il terzo file, \textbf{yarn-site.xml}, serve a impostare su quale macchina girerà il source manager. Apriamolo:
+
+\begin{verbatim}
+    $ sudo nano $HADOOP_CONF_DIF/yarn-site.xml
+\end{verbatim}
+
+e, come fatto prima, inseriamo la seguente proprietà:
+
+\begin{verbatim}
+    <property>
+    <name>yarn.nodemanager.aux-services</name>
+    <value>mapreduce_shuffle</value>
+    </property>
+    <property>
+    <name>yarn.resourcemanager.hostname</name>
+    <value>namenode</value>
+    </property>
+\end{verbatim}
+
+Infine, creiamo una copia del file \textbf{mapred-site.xml.template} e apriamolo:
+
+\begin{verbatim}
+    $ sudo cp $HADOOP_CONF_DIF/mapred-site.xml.template
+        $HADOOP_CONF_DIF/mapred-site.xml
+    $ sudo nano $HADOOP_CONF_DIF/mapred-site.xml
+\end{verbatim}
+
+per inserire la seguente proprietà:
+
+\begin{verbatim}
+    <property>
+    <name>mapreduce.jobtracker.address</name>
+    <value>namenode:54311</value>
+    </property>
+    <property>
+    <name>mapreduce.framework.name</name>
+    <value>yarn</value>
+    </property>
+\end{verbatim}
+
+
+
+\subsubsection{Configurazione dell'istanza master}
+
+Andiamo \textcolor{red}{nel terminale del master} e apriamo il file \textbf{hdfs-site.xml}:
+
+\begin{verbatim}
+    $ sudo nano $HADOOP_CONF_DIF/hdfs-site.xml
+\end{verbatim}
+
+per inserire la seguente proprietà (dentro il tag \textit{configuration} come fatto finora):
+
+\begin{verbatim}
+    <property>
+    <name>dfs.replication</name>
+    <value>2</value>
+    </property>
+    <property>
+    <name>dfs.namenode.name.dir</name>
+    <value>file:///home/ubuntu/hadoop/data/hdfs/namenode</value>
+    </property>
+    <property>
+    <name>dfs.datanode.data.dir</name>
+    <value>file:///home/ubuntu/hadoop/data/hdfs/datanode</value>
+    </property>
+\end{verbatim}
+
+Creiamo ora le cartelle in cui andranno contenuti i dati del master e del nodo attivo sull'istanza master (datanode1):
+
+\begin{verbatim}
+    $ sudo mkdir -p $HADOOP_HOME/data/hdfs/namenode
+    $ sudo mkdir -p $HADOOP_HOME/data/hdfs/datanode
+    $ sudo nano $HADOOP_CONF_DIF/masters
+\end{verbatim}
+
+e scriviamoci dentro il nome del master:
+
+\begin{verbatim}
+    namenode
+\end{verbatim}
+
+Apriamo poi il file degli slave:
+
+\begin{verbatim}
+    $ sudo nano $HADOOP_CONF_DIF/slaves
+\end{verbatim}
+
+e scriviamoci i nomi degli slave (se contiene \textit{localhost} lo si può rimuovere senza problemi):
+
+\begin{verbatim}
+    datanode1
+    datanode2
+\end{verbatim}
+
+Infine diamo all'utente \textit{ubuntu} la proprietà della cartella in cui si trova la home di Hadoop:
+
+\begin{verbatim}
+    $ sudo chown -R ubuntu $HADOOP_HOME
+\end{verbatim}
+
+
+
+\subsubsection{Configurazione dell'istanza datanode2}
+
+Andiamo nel terminale \textcolor{red}{della seconda istanza} e apriamo il file \textbf{hdfs-site.xml}:
+
+\begin{verbatim}
+    $ sudo nano $HADOOP_CONF_DIF/hdfs-site.xml
+\end{verbatim}
+
+per inserire la seguente proprietà nella configurazione:
+
+\begin{verbatim}
+    <property>
+    <name>dfs.replication</name>
+    <value>2</value>
+    </property>
+    <property>
+    <name>dfs.namenode.name.dir</name>
+    <value>file:///home/ubuntu/hadoop/data/hdfs/namenode</value>
+    </property>
+    <property>
+    <name>dfs.datanode.data.dir</name>
+    <value>file:///home/ubuntu/hadoop/data/hdfs/datanode</value>
+    </property>
+\end{verbatim}
+
+Creiamo poi nel nodo la cartella in cui andranno contenuti i dati dello slave:
+
+\begin{verbatim}
+    $ sudo mkdir -p $HADOOP_HOME/data/hdfs/datanode
+\end{verbatim}
+
+e diamo all'utente \textit{ubuntu} la proprietà della cartella in cui si trova la home di Hadoop:
+
+\begin{verbatim}
+    $ sudo chown -R ubuntu $HADOOP_HOME
+\end{verbatim}
+
+
+
+
+\subsubsection{Installazione e configurazione di Spark}
+
+L'installazione di Spark va fatta \textcolor{red}{su ogni nodo del cluster}. Scarichiamo ed estraiamo
+Spark spostandolo nella cartella \textbf{/home/ubuntu/spark}, e alla fine rimuoviamo il
+file .tgz scaricato:
+
+\begin{verbatim}
+    $ wget https://archive.apache.org/dist/spark
+        /spark-3.2.4/spark-3.2.4-bin-hadoop2.7.tgz
+    $ tar xvzf spark-3.2.4-bin-hadoop2.7.tgz
+    $ sudo mv ./spark-3.2.4-bin-hadoop2.7 /home/ubuntu/spark
+    $ rm spark-3.2.4-bin-hadoop2.7.tgz
+\end{verbatim}
+
+Per impostare le variabili d'ambiente di Spark (che includono la configurazione di Hadoop) cloniamo e apriamo il file \textbf{spark-env.sh}:
+
+\begin{verbatim}
+    $ sudo cp spark/conf/spark-env.sh.template spark/conf/spark-env.sh
+    $ sudo nano spark/conf/spark-env.sh
+\end{verbatim}
+
+e inseriamo le seguenti righe, sostituendo NAMENODEADDRESS con l'indirizzo privato del master:
+
+\begin{verbatim}
+    export SPARK_MASTER_HOST="NAMENODEADDRESS"
+    export HADOOP_CONF_DIR="/home/ubuntu/hadoop/conf"
+\end{verbatim}
